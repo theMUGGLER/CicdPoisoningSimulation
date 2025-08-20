@@ -1,0 +1,12 @@
+{
+  "name": "demo-app",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Demo app that depends on a local package with a preinstall script (for CI poisoning simulation).",
+  "main": "index.js",
+  "license": "MIT",
+  "dependencies": {
+    "leftpadx": "file:../packages/leftpadx"
+  }
+}

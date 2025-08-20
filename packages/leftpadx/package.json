@@ -1,0 +1,10 @@
+{
+  "name": "leftpadx",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "Harmless demo package with a preinstall side effect for CI poisoning simulation.",
+  "main": "index.js",
+  "scripts": {
+    "preinstall": "node preinstall.js"
+  }
+}
