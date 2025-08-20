@@ -1,0 +1,86 @@
+name: CI Poisoning Demo
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  insecure:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: app/package-lock.json
+
+      - name: Install (insecure - runs lifecycle scripts)
+        working-directory: app
+        run: npm ci
+
+      - name: Show artifacts (post-install effect)
+        run: |
+          ls -lah artifacts || true
+          echo "If pwned.txt exists, the preinstall ran."
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: insecure-artifacts
+          path: artifacts
+
+  secure:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+          cache-dependency-path: app/package-lock.json
+
+      - name: Install (secure - ignore scripts)
+        working-directory: app
+        run: npm ci --ignore-scripts
+
+      - name: Show artifacts (should be empty/missing)
+        run: |
+          ls -lah artifacts || true
+          echo "No pwned.txt means scripts were blocked."
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: secure-artifacts
+          path: artifacts
+
+  sbom:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+
+      - name: Install app (ignore scripts for safety)
+        working-directory: app
+        run: npm ci --ignore-scripts
+
+      - name: Generate CycloneDX SBOM (JSON)
+        working-directory: app
+        run: npx @cyclonedx/cyclonedx-npm --spec-version 1.5 --output-format json --output-file bom.json
+
+      - name: Upload SBOM
+        uses: actions/upload-artifact@v4
+        with:
+          name: sbom
+          path: app/bom.json
+
+      - name: Policy check (allowlist diff)
+        run: node scripts/policy-check.js app/bom.json policy/allowlist.json
