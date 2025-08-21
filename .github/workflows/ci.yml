@@ -89,14 +89,29 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # We don't need Node here; the OSV action runs its own scanner
-      - name: Download SBOM artifact from previous job
-        uses: actions/download-artifact@v4
+      # make sure SBOM exists (generate it just like in sbom job)
+      - uses: actions/setup-node@v4
         with:
-          name: sbom
-          path: sbom-artifact
+          node-version: 18
+          cache: npm
+          cache-dependency-path: '**/package-lock.json'
 
-      - name: Run OSV-Scanner on the SBOM
-        uses: google/osv-scanner-action@v1
-        with:
-          scan-args: --sbom=sbom-artifact/bom.json
+      - name: Install deps (ignore scripts for safety)
+        working-directory: app
+        run: npm ci --ignore-scripts
+
+      - name: Generate CycloneDX SBOM (JSON)
+        working-directory: app
+        run: npx @cyclonedx/cyclonedx-npm@2.1.0 --spec-version 1.5 --output-format json --output-file bom.json
+
+      - name: Install OSV-Scanner CLI (Linux amd64)
+        run: |
+          set -euo pipefail
+          VERSION="2.2.1"
+          curl -sSL -o osv-scanner "https://github.com/google/osv-scanner/releases/download/v${VERSION}/osv-scanner_${VERSION}_linux_amd64"
+          chmod +x osv-scanner
+          ./osv-scanner --version
+
+      - name: Run OSV-Scanner on SBOM
+        working-directory: app
+        run: ../osv-scanner --sbom bom.json
