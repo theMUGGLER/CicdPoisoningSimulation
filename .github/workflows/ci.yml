@@ -2,9 +2,9 @@ name: CI Poisoning Demo
 
 on:
   push:
-    branches: [ main, master ]
+    branches: [main, master]
   pull_request:
-    branches: [ main, master ]
+    branches: [main, master]
 
 jobs:
   insecure:
@@ -84,7 +84,7 @@ jobs:
       - name: Policy check (allowlist diff)
         run: node scripts/policy-check.js app/bom.json policy/allowlist.json
 
-osv-scan:
+  osv-scan:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
