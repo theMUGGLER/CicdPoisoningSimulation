@@ -103,12 +103,12 @@ jobs:
         working-directory: app
         run: npx @cyclonedx/cyclonedx-npm@2.1.0 --spec-version 1.5 --output-format json --output-file bom.json
 
-      - name: Install OSV-Scanner CLI (via official script)
+      - name: Install OSV-Scanner (official script)
         run: |
           set -euo pipefail
-          VERSION="v1.8.3"   # pick a known good tag; update when needed
+          VER="v1.9.1"
           curl -sSfL https://raw.githubusercontent.com/google/osv-scanner/main/scripts/install.sh \
-            | sh -s -- -b ./bin ${VERSION}
+            | sh -s -- -b ./bin ${VER}
           ./bin/osv-scanner --version
 
       - name: Run OSV-Scanner on SBOM
