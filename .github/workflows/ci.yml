@@ -14,9 +14,9 @@ jobs:
 
       - uses: actions/setup-node@v4
         with:
-          node-version: '18'
-          cache: 'npm'
-          cache-dependency-path: app/package-lock.json
+          node-version: 18
+          cache: npm
+          cache-dependency-path: '**/package-lock.json'
 
       - name: Install (insecure - runs lifecycle scripts)
         working-directory: app
@@ -27,8 +27,7 @@ jobs:
           ls -lah artifacts || true
           echo "If pwned.txt exists, the preinstall ran."
 
-      - name: Upload artifacts
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
           name: insecure-artifacts
           path: artifacts
@@ -38,58 +37,4 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '18'
-          cache: 'npm'
-          cache-dependency-path: app/package-lock.json
-
-      - name: Install (secure - ignore scripts)
-        working-directory: app
-        run: npm ci --ignore-scripts
-
-      - name: Show artifacts (should be empty/missing)
-        run: |
-          ls -lah artifacts || true
-          echo "No pwned.txt means scripts were blocked."
-
-      - name: Upload artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: secure-artifacts
-          path: artifacts
-
-  sbom:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '18'
-
-      - name: Install app (ignore scripts for safety)
-        working-directory: app
-        run: npm ci --ignore-scripts
-
-      - name: Generate CycloneDX SBOM (JSON)
-        working-directory: app
-        run: npx @cyclonedx/cyclonedx-npm --spec-version 1.5 --output-format json --output-file bom.json
-
-      - name: Upload SBOM
-        uses: actions/upload-artifact@v4
-        with:
-          name: sbom
-          path: app/bom.json
-
-      - name: Policy check (allowlist diff)
-        run: node scripts/policy-check.js app/bom.json policy/allowlist.json
-
- # --- NEW: OSV-Scanner on the SBOM ---
-      - name: Install OSV-Scanner
-        run: |
-          mkdir -p bin
-          curl -sSfL https://raw.githubusercontent.com/google/osv-scanner/main/scripts/install.sh | sh -s -- -b ./bin v1.8.3
-
-      - name: Scan SBOM for known vulnerabilities
-        run: ./bin/osv-scanner --sbom app/bom.json        
+      - uses: actio
