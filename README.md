@@ -1,45 +1,81 @@
-# CI/CD Pipeline Poisoning — Safe Simulation (with SBOM)
+# CICD Poisoning Simulation
 
-This project shows how a dependency's install script can run inside CI, and how to block it.
-It also adds a **CycloneDX SBOM** job to inventory your dependencies.
+This project demonstrates how attackers can exploit insecure CI/CD pipelines, and how to mitigate those risks using **SBOMs (Software Bill of Materials)** and **OSV (Open Source Vulnerability) scanning**.
 
-## What you'll see
-- **insecure** job: `npm ci` runs lifecycle scripts → creates `artifacts/pwned.txt`.
-- **secure** job: `npm ci --ignore-scripts` blocks scripts → no `pwned.txt`.
-- **sbom** job: Generates `bom.xml` (CycloneDX SBOM) so you can review dependencies.
+---
 
-## CycloneDX SBOM — what's the job?
-An SBOM (Software Bill of Materials) is a **parts list** for your software:
-- Lists every dependency (name, version, supplier).
-- Helps identify known-vulnerable or malicious packages.
-- Enables policy checks: fail builds when unexpected packages appear.
-CycloneDX is a widely-used **standard format** for SBOMs, so scanners and policy tools can read it.
+## 🚨 Insecure Workflow
+The insecure workflow shows how malicious code (like a `postinstall` script) can sneak into the pipeline through dependencies.  
+- Example: A fake dependency writes a `pwn.txt` file to simulate an attack.  
+- Since the workflow does not verify dependencies, the malicious code runs without detection.
 
-## Structure
-```
-.
-├── app/
-│   ├── index.js
-│   └── package.json       # depends on ../packages/leftpadx (local file dependency)
-├── packages/
-│   └── leftpadx/
-│       ├── package.json   # has a harmless "preinstall" script
-│       ├── preinstall.js  # writes artifacts/pwned.txt
-│       └── index.js
-├── artifacts/             # build artifacts (captured by CI)
-└── .github/workflows/ci.yml
-```
+---
 
-## Run locally (optional)
-```bash
-cd app
-npm ci                  # insecure (runs scripts)
-# or
-npm ci --ignore-scripts # secure (blocks scripts)
-node index.js
-```
+## ✅ Secure Workflow (SBOM + Policy)
+We add extra steps to detect tampering and vulnerabilities:
+1. **SBOM Generation**  
+   - SBOM (Software Bill of Materials) is like an ingredient list for your software.
+   - We use [CycloneDX](https://cyclonedx.org/) to generate a `bom.json` file listing all dependencies.
 
-## Use on GitHub
-1. Create a new repo and push these files.
-2. Open **Actions** to see 3 jobs: insecure / secure / sbom.
-3. Download artifacts to inspect `pwned.txt` (insecure) and `bom.xml` (sbom).
+2. **Allowlist Policy Check**  
+   - We compare the generated SBOM with an `allowlist.txt` (trusted dependencies).  
+   - If any dependency not on the list is found → **build fails**.
+
+3. **OSV Vulnerability Scanning**  
+   - We use [Google OSV-Scanner](https://osv.dev/) to check the SBOM/lockfile against a public database of known vulnerabilities.
+   - If vulnerabilities are found → **build fails**.
+
+---
+
+## 📂 Workflows
+The following workflows are included:
+- `.github/workflows/insecure.yml` → shows a poisoned pipeline (malicious dependency runs).  
+- `.github/workflows/secure.yml` → adds SBOM generation + allowlist check.  
+- `.github/workflows/osv.yml` → runs OSV-Scanner on the SBOM/lockfile.
+
+---
+
+## 🔍 Current Progress
+- [x] Simulated insecure build (with malicious dependency writing `pwn.txt`).  
+- [x] Added **SBOM generation** step using CycloneDX.  
+- [x] Added **allowlist policy** to block unknown dependencies.  
+- [x] Integrated **OSV-Scanner GitHub Action** to detect vulnerabilities in dependencies.  
+- [ ] Future work: Add **CodeQL** or **Trivy** scanning for container images.
+
+---
+
+## 🛠️ How to Reproduce
+1. Clone the repo:
+   ```bash
+   git clone https://github.com/theMUGGLER/CicdPoisoningSimulation.git
+   cd CicdPoisoningSimulation
+   ```
+
+2. Push code to trigger GitHub Actions workflows.  
+   - `insecure.yml` → pipeline gets poisoned (`pwn.txt` created).  
+   - `secure.yml` → pipeline blocks unknown dependencies.  
+   - `osv.yml` → pipeline scans for vulnerabilities.
+
+3. View results in the GitHub Actions tab or Security tab.
+
+---
+
+## 📊 Example Outputs
+- **Insecure build:** `pwn.txt` created in artifacts.  
+- **Secure build:** Workflow fails if a dependency is not in the allowlist.  
+- **OSV scan:** No issues found (currently) → visible in GitHub Security tab.
+
+---
+
+## 🧠 Key Learnings
+- Always verify dependencies (don’t trust blindly).  
+- SBOMs provide visibility into what’s inside your software.  
+- OSV scanning ensures you don’t use vulnerable packages.  
+- CI/CD pipelines are **prime targets** for attackers → securing them is critical.
+
+---
+
+## 🔮 Next Steps
+- Add container scanning (Trivy).  
+- Add secret scanning.  
+- Add CodeQL analysis for code vulnerabilities.  
