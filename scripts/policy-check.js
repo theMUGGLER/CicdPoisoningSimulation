@@ -1,12 +1,12 @@
-// Simple SBOM policy check: fail if components outside allowlist are present.
-import { readFileSync } from 'fs';
-import { resolve } from 'path';
+// scripts/policy-check.js (CommonJS version)
+const fs = require('fs');
+const path = require('path');
 
 const sbomPath = process.argv[2] || 'app/bom.json';
 const allowlistPath = process.argv[3] || 'policy/allowlist.json';
 
 function loadJson(p) {
-  return JSON.parse(readFileSync(resolve(p), 'utf8'));
+  return JSON.parse(fs.readFileSync(path.resolve(p), 'utf8'));
 }
 
 const sbom = loadJson(sbomPath);
@@ -24,15 +24,13 @@ const components = (sbom.components || []).map(c => ({
 const violations = [];
 for (const c of components) {
   const ok = allowedNames.has(c.name) || (c.purl && allowedPurls.has(c.purl));
-  if (!ok) {
-    violations.push(c);
-  }
+  if (!ok) violations.push(c);
 }
 
 if (violations.length) {
   console.error('❌ Policy violation: unexpected components found in SBOM:');
   for (const v of violations) {
-    console.error(` - ${v.name}@${v.version} ${v.purl ? '('+v.purl+')' : ''}`);
+    console.error(` - ${v.name}@${v.version} ${v.purl ? '(' + v.purl + ')' : ''}`);
   }
   console.error('\nTo allow, add names to policy/allowlist.json -> "allowedNames" or specific "allowedPurls".');
   process.exit(1);
