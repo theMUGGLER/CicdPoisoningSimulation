@@ -85,32 +85,17 @@ jobs:
         run: node scripts/policy-check.js app/bom.json policy/allowlist.json
 
   osv-scan:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
+    # Scan your repo for known-vulnerable deps using the official OSV reusable workflow
+    uses: google/osv-scanner-action/.github/workflows/osv-scanner-reusable.yml@v2.2.1
+    permissions:
+      actions: read           # required by the reusable workflow
+      contents: read
+      security-events: write  # to upload results to Security > Code scanning
+    with:
+      # Point it at your lockfile (simplest + most deterministic)
+      scan-args: |-
+        --lockfile=./app/package-lock.json
+      # Optional flags you can tweak:
+      # fail-on-vuln: true      # default is true
+      # results-file-name: results.sarif
 
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 18
-          cache: npm
-          cache-dependency-path: '**/package-lock.json'
-
-      - name: Install dependencies (safe)
-        working-directory: app
-        run: npm ci --ignore-scripts
-
-      - name: Generate SBOM (JSON)
-        working-directory: app
-        run: npx @cyclonedx/cyclonedx-npm@2.1.0 --spec-version 1.5 --output-format json --output-file bom.json
-
-      - name: Install OSV-Scanner (official script)
-        run: |
-          set -euo pipefail
-          VER="v1.9.1"
-          curl -sSfL https://raw.githubusercontent.com/google/osv-scanner/main/scripts/install.sh \
-            | sh -s -- -b ./bin ${VER}
-          ./bin/osv-scanner --version
-
-      - name: Run OSV-Scanner on SBOM
-        working-directory: app
-        run: ../bin/osv-scanner --sbom bom.json
