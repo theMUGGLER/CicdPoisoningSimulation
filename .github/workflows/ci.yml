@@ -84,25 +84,19 @@ jobs:
       - name: Policy check (allowlist diff)
         run: node scripts/policy-check.js app/bom.json policy/allowlist.json
 
-  osv-scan:
+osv-scan:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v4
+      # We don't need Node here; the OSV action runs its own scanner
+      - name: Download SBOM artifact from previous job
+        uses: actions/download-artifact@v4
         with:
-          node-version: 18
-          cache: npm
-          cache-dependency-path: '**/package-lock.json'
+          name: sbom
+          path: sbom-artifact
 
-      - name: Install dependencies (safe)
-        working-directory: app
-        run: npm ci --ignore-scripts
-
-      - name: Generate SBOM (JSON)
-        working-directory: app
-        run: npx @cyclonedx/cyclonedx-npm@2.1.0 --spec-version 1.5 --output-format json --output-file bom.json
-
-      - name: Run OSV Scanner
-        working-directory: app
-        run: npx osv-scanner --sbom=bom.json
+      - name: Run OSV-Scanner on the SBOM
+        uses: google/osv-scanner-action@v1
+        with:
+          scan-args: --sbom=sbom-artifact/bom.json
